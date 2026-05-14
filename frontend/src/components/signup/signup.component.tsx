@@ -143,7 +143,7 @@ const SignUpComponent = () => {
               <SSInput
                 label="Confirm Password"
                 name="confirmPassword"
-                type="text"
+                type="password"
                 placeholder="Confirm your password"
                 required={true}
                 icon="fas fa-eye"
