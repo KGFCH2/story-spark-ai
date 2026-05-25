@@ -41,25 +41,16 @@ export interface ITopicData {
   selected: boolean;
 }
 
-export interface ITopicData {
-  title: string;
-  // REMOVED: color: string;
-  selected: boolean;
-}
 
-export interface ITopicData {
-  title: string;
-  selected: boolean;
-}
 
 export const topicsData: ITopicData[] = [
-  { title: "#AIWriting", selected: true },
-  { title: "#StoryGeneration", selected: true },
-  { title: "#Writing", selected: false },
-  { title: "#Creativity", selected: false },
-  { title: "#DigitalMarketing", selected: false },
-  { title: "#Storytelling", selected: false },
-  { title: "#Productivity", selected: false },
+  { title: "#AIWriting", color: "#9333ea", selected: true },
+  { title: "#StoryGeneration", color: "#3b82f6", selected: true },
+  { title: "#Writing", color: "#10b981", selected: false },
+  { title: "#Creativity", color: "#f59e0b", selected: false },
+  { title: "#DigitalMarketing", color: "#ef4444", selected: false },
+  { title: "#Storytelling", color: "#8b5cf6", selected: false },
+  { title: "#Productivity", color: "#06b6d4", selected: false },
 ];
 
 export const getWordCount = (str: string) => {
