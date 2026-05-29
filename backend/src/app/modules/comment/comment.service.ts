@@ -37,25 +37,37 @@ const createComment = async (
 };
 
 const getCommentsByPostId = async (postId: string) => {
-  const comments = await Comment.find({ postId, parentCommentId: null })
+  // Fetch all comments for this post in a single query instead of
+  // issuing N+1 queries (1 for top-level + N for each reply thread).
+  const allComments = await Comment.find({ postId })
     .populate("userId", "name email")
-    .populate({
-      path: "likes",
-    })
-    .sort({ createdAt: -1 });
-  const commentsWithReplies = await Promise.all(
-    comments.map(async (comment) => {
-      const replies = await Comment.find({ parentCommentId: comment._id })
-        .populate("userId", "name email")
-        .populate({ path: "likes" })
-        .sort({ createdAt: 1 });
-      return {
-        ...comment.toObject(),
-        replies,
-      };
-    })
-  );
-  const totalComments = await Comment.countDocuments({ postId });
+    .populate({ path: "likes" })
+    .sort({ createdAt: 1 });
+
+  const totalComments = allComments.length;
+
+  // Build parent → replies tree in O(N) using a lookup map.
+  const repliesMap = new Map<string, typeof allComments>();
+  const topLevelComments: typeof allComments = [];
+
+  for (const comment of allComments) {
+    if (comment.parentCommentId) {
+      const parentId = comment.parentCommentId.toString();
+      if (!repliesMap.has(parentId)) {
+        repliesMap.set(parentId, []);
+      }
+      repliesMap.get(parentId)!.push(comment);
+    } else {
+      topLevelComments.push(comment);
+    }
+  }
+
+  // Attach replies to each top-level comment and reverse for newest-first.
+  const commentsWithReplies = topLevelComments.reverse().map((comment) => ({
+    ...comment.toObject(),
+    replies: repliesMap.get(comment._id.toString()) || [],
+  }));
+
   return { comments: commentsWithReplies, totalComments };
 };
 
