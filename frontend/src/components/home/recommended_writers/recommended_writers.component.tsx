@@ -50,50 +50,20 @@ const RecommendedWritersComponent = () => {
 
   return (
     <>
-      <section className="story-panel rounded-lg p-5 sm:p-6">
-        <h3 className="mb-5 text-lg font-bold tracking-tight text-slate-100">
       <section className="bg-blue-500/10 rounded-lg shadow-sm p-6">
         <h3 className="text-lg font-semibold text-slate-900 dark:text-gray-300 mb-4">
           Recommended Writers
         </h3>
 
-        <div className="space-y-3">
+        <div className="space-y-4">
           {recommendedWriters.map((writer, index) => (
-            <div
-              key={index}
-              className="flex items-center justify-between gap-3 rounded-lg border border-slate-700/40 bg-slate-950/20 p-3"
-            >
-              <div className="flex min-w-0 items-center">
-                <img
-                  className="h-10 w-10 shrink-0 rounded-full object-cover ring-2 ring-blue-400/20"
-                  src={writer.image}
-                  alt={writer.name}
-                />
-
-                <div className="ml-3 min-w-0">
-                  <p className="truncate text-sm font-semibold text-slate-300">
-                    {writer.name}
-                  </p>
-
-                  <p className="text-xs text-slate-500">
-                    {writer.role}
-                  </p>
-                </div>
-              </div>
-
-              <button
-                onClick={() => toggleFollow(index)}
-                className="motion-cta shrink-0 rounded-full border border-indigo-400/25 bg-indigo-500/10 px-3 py-1.5 text-sm font-semibold text-indigo-200 hover:border-indigo-300/50 hover:bg-indigo-500/20 hover:text-white"
-              >
-            <div key={index} className="flex items-center justify-between">
             <div key={writer.id} className="flex items-center justify-between">
               <div className="flex items-center">
                 <img
-                  className="h-10 w-10 rounded-full"
+                  className="h-10 w-10 rounded-full object-cover"
                   src={writer.image}
                   alt={writer.name}
                 />
-
                 <div className="ml-3">
                   <p className="text-sm font-medium text-slate-700 dark:text-gray-400">
                     {writer.name}
@@ -103,12 +73,7 @@ const RecommendedWritersComponent = () => {
                   </p>
                 </div>
               </div>
-
-              <button
-                onClick={() => toggleFollow(index, writer.id)}
-                disabled={isLoading}
-                className="!rounded-button text-indigo-600 text-sm font-medium hover:text-indigo-700 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-              >
+              <button disabled={isLoading} onClick={() => toggleFollow(index, writer.id)} className="motion-cta rounded-full px-3 py-1.5 text-sm text-white font-semibold disabled:opacity-50">
                 {following.includes(index) ? "Following" : "Follow"}
               </button>
             </div>

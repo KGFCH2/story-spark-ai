@@ -35,9 +35,6 @@ export const doPublishAccessibility = (subscriptionType: string) => {
   }
 };
 
-export interface ITopicData {
-  title: string;
-  color: string;
 export const SELECTED_TOPIC_CLASSES = "bg-indigo-100 text-indigo-800";
 export const UNSELECTED_TOPIC_CLASSES = "bg-slate-700 text-slate-300";
 
@@ -48,14 +45,6 @@ export interface ITopicData {
   selected: boolean;
 }
 
-export const topicsData: ITopicData[] = [
-  { title: "#AIWriting", color: "bg-blue-500/15 text-blue-200 border border-blue-400/20", selected: true },
-  { title: "#StoryGeneration", color: "bg-indigo-500/15 text-indigo-200 border border-indigo-400/20", selected: true },
-  { title: "#Writing", color: "bg-sky-500/15 text-sky-200 border border-sky-400/20", selected: false },
-  { title: "#Creativity", color: "bg-fuchsia-500/15 text-fuchsia-200 border border-fuchsia-400/20", selected: false },
-  { title: "#DigitalMarketing", color: "bg-emerald-500/15 text-emerald-200 border border-emerald-400/20", selected: false },
-  { title: "#Storytelling", color: "bg-amber-500/15 text-amber-200 border border-amber-400/20", selected: false },
-  { title: "#Productivity", color: "bg-rose-500/15 text-rose-200 border border-rose-400/20", selected: false },
 export const TOPICS: ITopicData[] = [
   {
     title: "#StoryIdeas",

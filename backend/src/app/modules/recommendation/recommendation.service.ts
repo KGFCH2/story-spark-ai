@@ -21,7 +21,7 @@ const getPersonalizedRecommendations = async (token: ITokenPayload) => {
     query._id = { $nin: readingHistory };
   }
 
-  let recommendations: IStoryVersion[] =  [];
+  let recommendations: IStoryVersion[] = [];
 
   // If user has preferences, try to match them
   if (readingPreferences) {

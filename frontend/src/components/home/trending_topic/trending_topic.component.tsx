@@ -3,8 +3,6 @@ import { topicsData } from "../../stories/stories.utils";
 
 const TrendingTopicComponent = () => {
   return (
-    <section className="story-panel rounded-lg p-5 sm:p-6">
-      <h3 className="mb-4 text-lg font-bold tracking-tight text-slate-100">
     <section className="bg-blue-500/10 rounded-lg shadow-sm p-6 mb-8">
       <h3 className="text-lg font-semibold text-slate-900 dark:text-gray-300 mb-4">
         Trending Topics

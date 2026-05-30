@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import StoriesViewComponent, { IStories } from "./stories.view.component";
+import RecentPromptsPanel from "./RecentPromptsPanel";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { getUserInfo, isLoggedIn } from "../../services/auth.service";
 import { getRequestLimit, getWordCount, prompts } from "./stories.utils";
@@ -12,7 +13,20 @@ import { SubmitHandler, useForm } from "react-hook-form";
 import { useGetProfileInfoQuery } from "../../redux/apis/user.api";
 import { getErrorMessage } from "../../error/error.message";
 import useKeyboardShortcuts from "../../hooks/useKeyboardShortcuts";
+import { useRecentPrompts } from "../../hooks/useRecentPrompts";
 import StoryGeneratingAnimation from "../loading/story-generating-animation.component";
+
+const soundtrackMap: Record<string, string> = {
+  "🧙 Fantasy": "/audio/fantasy.mp3",
+  "😱 Horror": "/audio/horror.mp3",
+  "💕 Romance": "/audio/romance.mp3",
+  "🎭 Drama": "/audio/drama.mp3", 
+  "😂 Comedy": "/audio/comedy.mp3", 
+  "🚀 Sci-Fi": "/audio/sci-fi.mp3", 
+  "🔍 Mystery": "/audio/mystery.mp3", 
+  "🌟 Adventure": "/audio/adventure.mp3"
+};
+
 type Inputs = {
   prompt: string;
 };
@@ -32,7 +46,7 @@ const LANGUAGES = [
   { code: "bn", name: "Bengali" },
   { code: "ta", name: "Tamil" },
   { code: "te", name: "Telugu" },
-  { code: "mr", name: "Marathi" }
+  { code: "mr", name: "Marathi" },
 ];
 
 const GENRES = [
@@ -137,6 +151,11 @@ type UiText = {
   freeLimitReached: string;
   freeLimitMessage: string;
   continueBrowsing: string;
+  recentPrompts: string;
+  usePrompt: string;
+  delete: string;
+  clearAll: string;
+  noRecentPrompts: string;
 };
 
 const UI_TEXT: Record<string, UiText> = {
@@ -151,7 +170,7 @@ const UI_TEXT: Record<string, UiText> = {
     charactersRemaining: "characters remaining", shortcuts: "Keyboard Shortcuts", openHelp: "Open help", closeHelp: "Close help",
     focusPrompt: "Focus prompt", generateStory: "Generate story", publishStory: "Publish story", close: "Close",
     freeLimitReached: "Free Limit Reached", freeLimitMessage: "You've used all 3 free story generations. Login to continue creating more stories.",
-    continueBrowsing: "Continue Browsing",
+    continueBrowsing: "Continue Browsing", recentPrompts: "Recent Prompts", usePrompt: "Use", delete: "Delete", clearAll: "Clear All", noRecentPrompts: "No recent prompts yet",
   },
   Spanish: {
     back: "VOLVER", freeAccess: "Acceso gratis para 3 solicitudes", login: "Iniciar sesion", forMore: "para obtener mas!",
@@ -164,7 +183,7 @@ const UI_TEXT: Record<string, UiText> = {
     charactersRemaining: "caracteres restantes", shortcuts: "Atajos de teclado", openHelp: "Abrir ayuda", closeHelp: "Cerrar ayuda",
     focusPrompt: "Enfocar indicacion", generateStory: "Generar historia", publishStory: "Publicar historia", close: "Cerrar",
     freeLimitReached: "Limite gratuito alcanzado", freeLimitMessage: "Has usado las 3 generaciones gratuitas. Inicia sesion para continuar creando historias.",
-    continueBrowsing: "Continuar navegando",
+    continueBrowsing: "Continuar navegando", recentPrompts: "Indicaciones recientes", usePrompt: "Usar", delete: "Eliminar", clearAll: "Limpiar todo", noRecentPrompts: "Sin indicaciones recientes",
   },
   French: {
     back: "RETOUR", freeAccess: "Acces gratuit pour 3 demandes", login: "Connexion", forMore: "pour en obtenir plus !",
@@ -177,7 +196,7 @@ const UI_TEXT: Record<string, UiText> = {
     charactersRemaining: "caracteres restants", shortcuts: "Raccourcis clavier", openHelp: "Ouvrir l'aide", closeHelp: "Fermer l'aide",
     focusPrompt: "Cibler l'invite", generateStory: "Generer une histoire", publishStory: "Publier l'histoire", close: "Fermer",
     freeLimitReached: "Limite gratuite atteinte", freeLimitMessage: "Vous avez utilise les 3 generations gratuites. Connectez-vous pour continuer a creer des histoires.",
-    continueBrowsing: "Continuer la navigation",
+    continueBrowsing: "Continuer la navigation", recentPrompts: "Invites recentes", usePrompt: "Utiliser", delete: "Supprimer", clearAll: "Effacer tout", noRecentPrompts: "Pas d'invites recentes",
   },
   Portuguese: {
     back: "VOLTAR", freeAccess: "Acesso gratuito para 3 solicitacoes", login: "Entrar", forMore: "para ter mais!",
@@ -190,7 +209,7 @@ const UI_TEXT: Record<string, UiText> = {
     charactersRemaining: "caracteres restantes", shortcuts: "Atalhos de teclado", openHelp: "Abrir ajuda", closeHelp: "Fechar ajuda",
     focusPrompt: "Focar instrucao", generateStory: "Gerar historia", publishStory: "Publicar historia", close: "Fechar",
     freeLimitReached: "Limite gratuito atingido", freeLimitMessage: "Voce usou as 3 geracoes gratuitas. Entre para continuar criando historias.",
-    continueBrowsing: "Continuar navegando",
+    continueBrowsing: "Continuar navegando", recentPrompts: "Instrucoes recentes", usePrompt: "Usar", delete: "Deletar", clearAll: "Limpar tudo", noRecentPrompts: "Sem instrucoes recentes",
   },
   Hindi: {
     back: "वापस", freeAccess: "3 अनुरोधों के लिए मुफ्त उपयोग", login: "लॉग इन", forMore: "और पाने के लिए!",
@@ -202,7 +221,7 @@ const UI_TEXT: Record<string, UiText> = {
     selectPrompt: "एक संकेत चुनें", characterLimit: "अक्षर सीमा पूरी - निर्माण अक्षम है", charactersRemaining: "अक्षर शेष",
     shortcuts: "कीबोर्ड शॉर्टकट", openHelp: "सहायता खोलें", closeHelp: "सहायता बंद करें", focusPrompt: "संकेत पर जाएं",
     generateStory: "कहानी बनाएं", publishStory: "कहानी प्रकाशित करें", close: "बंद करें", freeLimitReached: "मुफ्त सीमा पूरी",
-    freeLimitMessage: "आपने सभी 3 मुफ्त कहानी निर्माण उपयोग कर लिए हैं। आगे जारी रखने के लिए लॉग इन करें।", continueBrowsing: "ब्राउज़ करना जारी रखें",
+    freeLimitMessage: "आपने सभी 3 मुफ्त कहानी निर्माण उपयोग कर लिए हैं। आगे जारी रखने के लिए लॉग इन करें।", continueBrowsing: "ब्राउज़ करना जारी रखें", recentPrompts: "हाल के संकेत", usePrompt: "उपयोग करें", delete: "हटाएं", clearAll: "सब साफ करें", noRecentPrompts: "कोई हाल के संकेत नहीं",
   },
   German: {
     back: "ZURUCK", freeAccess: "Kostenloser Zugang fur 3 Anfragen", login: "Anmelden", forMore: "fur mehr!",
@@ -214,7 +233,7 @@ const UI_TEXT: Record<string, UiText> = {
     selectPrompt: "Vorgabe auswahlen", characterLimit: "Zeichenlimit erreicht - Erstellung deaktiviert", charactersRemaining: "Zeichen ubrig",
     shortcuts: "Tastaturkurzel", openHelp: "Hilfe offnen", closeHelp: "Hilfe schliessen", focusPrompt: "Vorgabe fokussieren",
     generateStory: "Geschichte erstellen", publishStory: "Geschichte veroffentlichen", close: "Schliessen", freeLimitReached: "Kostenloses Limit erreicht",
-    freeLimitMessage: "Du hast alle 3 kostenlosen Erstellungen genutzt. Melde dich an, um weiterzumachen.", continueBrowsing: "Weiter ansehen",
+    freeLimitMessage: "Du hast alle 3 kostenlosen Erstellungen genutzt. Melde dich an, um weiterzumachen.", continueBrowsing: "Weiter ansehen", recentPrompts: "Aktuelle Vorgaben", usePrompt: "Verwenden", delete: "Loschen", clearAll: "Alles loschen", noRecentPrompts: "Keine aktuellen Vorgaben",
   },
   Japanese: {
     back: "戻る", freeAccess: "3回まで無料で利用できます", login: "ログイン", forMore: "してさらに利用！",
@@ -226,7 +245,7 @@ const UI_TEXT: Record<string, UiText> = {
     selectPrompt: "プロンプトを選択", characterLimit: "文字数の上限に達しました - 生成できません", charactersRemaining: "文字残り",
     shortcuts: "キーボードショートカット", openHelp: "ヘルプを開く", closeHelp: "ヘルプを閉じる", focusPrompt: "プロンプトに移動",
     generateStory: "物語を生成", publishStory: "物語を公開", close: "閉じる", freeLimitReached: "無料上限に達しました",
-    freeLimitMessage: "無料の物語生成を3回すべて使用しました。続けるにはログインしてください。", continueBrowsing: "閲覧を続ける",
+    freeLimitMessage: "無料の物語生成を3回すべて使用しました。続けるにはログインしてください。", continueBrowsing: "閲覧を続ける", recentPrompts: "最近のプロンプト", usePrompt: "使用", delete: "削除", clearAll: "すべてクリア", noRecentPrompts: "最近のプロンプトはありません",
   },
   Korean: {
     back: "뒤로", freeAccess: "요청 3회 무료 이용", login: "로그인", forMore: "하고 더 이용하세요!",
@@ -238,19 +257,19 @@ const UI_TEXT: Record<string, UiText> = {
     selectPrompt: "프롬프트 선택", characterLimit: "글자 수 제한 도달 - 생성할 수 없습니다", charactersRemaining: "글자 남음",
     shortcuts: "키보드 단축키", openHelp: "도움말 열기", closeHelp: "도움말 닫기", focusPrompt: "프롬프트에 초점",
     generateStory: "이야기 생성", publishStory: "이야기 게시", close: "닫기", freeLimitReached: "무료 한도 도달",
-    freeLimitMessage: "무료 이야기 생성 3회를 모두 사용했습니다. 계속하려면 로그인하세요.", continueBrowsing: "계속 둘러보기",
+    freeLimitMessage: "무료 이야기 생성 3회를 모두 사용했습니다. 계속하려면 로그인하세요.", continueBrowsing: "계속 둘러보기", recentPrompts: "최근 프롬프트", usePrompt: "사용", delete: "삭제", clearAll: "모두 지우기", noRecentPrompts: "최근 프롬프트가 없습니다",
   },
   Bengali: {
     back: "ফিরে যান", freeAccess: "৩টি অনুরোধের জন্য বিনামূল্যে ব্যবহার", login: "লগ ইন", forMore: "করে আরও পান!",
     perMonth: "প্রতি মাসে", upgrade: "আপগ্রেড", monthlyRequests: "এই মাসের অনুরোধ", totalPosts: "মোট পোস্ট",
     titleStart: "আপনার ভাবনাকে বদলে দিন", titleAccent: "অসাধারণ গল্পে!", length: "দৈর্ঘ্য", language: "ভাষা",
-    short: "ছোট", medium: "মাঝারি", long: "লম্বা", promptPlaceholder: "প্রতিটি মহান গল্প একটি ভাবনা দিয়ে শুরু হয়। আপনারটি কী?",
+    short: "ছোট", medium: "মাঝারি", long: "লম্বা", promptPlaceholder: "প্রতিটি মহান গল্প একটি ভাবনা দিয়ে শুরু হয়। আপনারটি কী?",
     keyboardTip: "কীবোর্ড টিপ:", press: "চাপুন", toGenerate: "তৈরি করতে", alsoWorks: "এটিও কাজ করে", forNewLine: "নতুন লাইনের জন্য",
     generating: "তৈরি হচ্ছে...", generate: "তৈরি করুন", examples: "কিছু উদাহরণ প্রম্পট:",
     selectPrompt: "একটি প্রম্পট বেছে নিন", characterLimit: "অক্ষরের সীমা পূর্ণ - তৈরি বন্ধ", charactersRemaining: "অক্ষর বাকি",
     shortcuts: "কীবোর্ড শর্টকাট", openHelp: "সহায়তা খুলুন", closeHelp: "সহায়তা বন্ধ করুন", focusPrompt: "প্রম্পটে যান",
     generateStory: "গল্প তৈরি করুন", publishStory: "গল্প প্রকাশ করুন", close: "বন্ধ করুন", freeLimitReached: "বিনামূল্যের সীমা পূর্ণ",
-    freeLimitMessage: "আপনি ৩টি বিনামূল্যের গল্প তৈরি ব্যবহার করেছেন। চালিয়ে যেতে লগ ইন করুন।", continueBrowsing: "ব্রাউজ চালিয়ে যান",
+    freeLimitMessage: "আপনি ৩টি বিনামূল্যের গল্প তৈরি ব্যবহার করেছেন। চালিয়ে যেতে লগ ইন করুন।", continueBrowsing: "ব্রাউজ চালিয়ে যান", recentPrompts: "সম্প্রতি ব্যবহৃত প্রম্পট", usePrompt: "ব্যবহার করুন", delete: "মুছে ফেলুন", clearAll: "সব মুছে দিন", noRecentPrompts: "কোনো সম্প্রতি ব্যবহৃত প্রম্পট নেই",
   },
   Tamil: {
     back: "திரும்பு", freeAccess: "3 கோரிக்கைகளுக்கு இலவச அணுகல்", login: "உள்நுழை", forMore: "செய்து மேலும் பெறுங்கள்!",
@@ -262,7 +281,7 @@ const UI_TEXT: Record<string, UiText> = {
     selectPrompt: "ஒரு குறிப்பை தேர்வு செய்க", characterLimit: "எழுத்து வரம்பு அடைந்தது - உருவாக்கம் முடக்கப்பட்டது", charactersRemaining: "எழுத்துகள் மீதம்",
     shortcuts: "விசைப்பலகை குறுக்குவழிகள்", openHelp: "உதவி திற", closeHelp: "உதவி மூடு", focusPrompt: "குறிப்பில் கவனம்",
     generateStory: "கதை உருவாக்கு", publishStory: "கதை வெளியிடு", close: "மூடு", freeLimitReached: "இலவச வரம்பு அடைந்தது",
-    freeLimitMessage: "3 இலவச கதை உருவாக்கங்களையும் பயன்படுத்திவிட்டீர்கள். தொடர உள்நுழையவும்.", continueBrowsing: "தொடர்ந்து பார்வையிடு",
+    freeLimitMessage: "3 இலவச கதை உருவாக்கங்களையும் பயன்படுத்திவிட்டீர்கள். தொடர உள்நுழையவும்.", continueBrowsing: "தொடர்ந்து பார்வையிடு", recentPrompts: "சமீபத்திய குறிப்புகள்", usePrompt: "பயன்படுத்து", delete: "நீக்கு", clearAll: "அனைத்தையும் நீக்கு", noRecentPrompts: "சமீபத்திய குறிப்புகள் இல்லை",
   },
   Telugu: {
     back: "వెనుకకు", freeAccess: "3 అభ్యర్థనలకు ఉచిత ప్రవేశం", login: "లాగిన్", forMore: "చేసి మరిన్ని పొందండి!",
@@ -274,7 +293,7 @@ const UI_TEXT: Record<string, UiText> = {
     selectPrompt: "ప్రాంప్ట్ ఎంచుకోండి", characterLimit: "అక్షర పరిమితి చేరింది - రూపొందింపు నిలిపివేయబడింది", charactersRemaining: "అక్షరాలు మిగిలాయి",
     shortcuts: "కీబోర్డ్ సత్వరమార్గాలు", openHelp: "సహాయం తెరవండి", closeHelp: "సహాయం మూసివేయండి", focusPrompt: "ప్రాంప్ట్‌పై దృష్టి",
     generateStory: "కథ రూపొందించు", publishStory: "కథ ప్రచురించు", close: "మూసివేయి", freeLimitReached: "ఉచిత పరిమితి చేరింది",
-    freeLimitMessage: "మీరు 3 ఉచిత కథా రూపొందింపులను ఉపయోగించారు. కొనసాగడానికి లాగిన్ చేయండి.", continueBrowsing: "బ్రౌజింగ్ కొనసాగించు",
+    freeLimitMessage: "మీరు 3 ఉచిత కథా రూపొందింపులను ఉపయోగించారు. కొనసాగడానికి లాగిన్ చేయండి.", continueBrowsing: "బ్రౌజింగ్ కొనసాగించు", recentPrompts: "ఇటీవల ప్రాంప్ట్‌లు", usePrompt: "ఉపయోగించు", delete: "తొలగించు", clearAll: "అన్నింటిని తొలగించు", noRecentPrompts: "ఇటీవల ప్రాంప్ట్‌లు లేవు",
   },
   Marathi: {
     back: "मागे", freeAccess: "3 विनंत्यांसाठी मोफत प्रवेश", login: "लॉग इन", forMore: "करून अधिक मिळवा!",
@@ -286,16 +305,100 @@ const UI_TEXT: Record<string, UiText> = {
     selectPrompt: "प्रॉम्प्ट निवडा", characterLimit: "अक्षर मर्यादा पूर्ण - निर्मिती बंद आहे", charactersRemaining: "अक्षरे बाकी",
     shortcuts: "कीबोर्ड शॉर्टकट", openHelp: "मदत उघडा", closeHelp: "मदत बंद करा", focusPrompt: "प्रॉम्प्टवर लक्ष",
     generateStory: "कथा तयार करा", publishStory: "कथा प्रकाशित करा", close: "बंद करा", freeLimitReached: "मोफत मर्यादा पूर्ण",
-    freeLimitMessage: "तुम्ही सर्व 3 मोफत कथा निर्मिती वापरल्या आहेत. पुढे सुरू ठेवण्यासाठी लॉग इन करा.", continueBrowsing: "ब्राउझिंग सुरू ठेवा",
+    freeLimitMessage: "तुम्ही सर्व 3 मोफत कथा निर्मिती वापरल्या आहेत. पुढे सुरू ठेवण्यासाठी लॉग इन करा.", continueBrowsing: "ब्राउझिंग सुरू ठेवा", recentPrompts: "अलीकडील प्रॉम्प्ट", usePrompt: "वापरा", delete: "हटवा", clearAll: "सर्व मुडून टाका", noRecentPrompts: "अलीकडील प्रॉम्प्ट नाहीत",
   },
 };
 
 const LANGUAGE_STORAGE_KEY = "storySparkLanguage";
 
+// NEW: Tone definitions — each has a label, emoji, and Tailwind colour classes
+// for the active/inactive pill states.
+const TONES = [
+  {
+    label: "Dark",
+    emoji: "🌑",
+    activeClass: "bg-gray-700 text-gray-100 border-gray-500 shadow-gray-700/40",
+    inactiveClass: "bg-white/5 text-gray-400 border-transparent hover:bg-white/10 hover:text-gray-200",
+  },
+  {
+    label: "Humorous",
+    emoji: "😄",
+    activeClass: "bg-yellow-500/20 text-yellow-300 border-yellow-500/60 shadow-yellow-500/20",
+    inactiveClass: "bg-white/5 text-gray-400 border-transparent hover:bg-white/10 hover:text-gray-200",
+  },
+  {
+    label: "Romantic",
+    emoji: "💕",
+    activeClass: "bg-pink-500/20 text-pink-300 border-pink-500/60 shadow-pink-500/20",
+    inactiveClass: "bg-white/5 text-gray-400 border-transparent hover:bg-white/10 hover:text-gray-200",
+  },
+  {
+    label: "Epic",
+    emoji: "⚔️",
+    activeClass: "bg-orange-500/20 text-orange-300 border-orange-500/60 shadow-orange-500/20",
+    inactiveClass: "bg-white/5 text-gray-400 border-transparent hover:bg-white/10 hover:text-gray-200",
+  },
+  {
+    label: "Mysterious",
+    emoji: "🔮",
+    activeClass: "bg-purple-500/20 text-purple-300 border-purple-500/60 shadow-purple-500/20",
+    inactiveClass: "bg-white/5 text-gray-400 border-transparent hover:bg-white/10 hover:text-gray-200",
+  },
+  {
+    label: "Children's",
+    emoji: "🧸",
+    activeClass: "bg-green-500/20 text-green-300 border-green-500/60 shadow-green-500/20",
+    inactiveClass: "bg-white/5 text-gray-400 border-transparent hover:bg-white/10 hover:text-gray-200",
+  },
+] as const;
+
+type ToneLabel = (typeof TONES)[number]["label"];
+
+// ---------------------------------------------------------------------------
+// TonePicker sub-component
+// ---------------------------------------------------------------------------
+interface TonePickerProps {
+  selected: ToneLabel | "";
+  onChange: (tone: ToneLabel | "") => void;
+}
+
+const TonePicker: React.FC<TonePickerProps> = ({ selected, onChange }) => {
+  return (
+    <div className="flex flex-wrap gap-2 mb-3">
+      <span className="w-full text-xs text-gray-400 mb-1">🎭 Tone:</span>
+      {TONES.map((tone) => {
+        const isActive = selected === tone.label;
+        return (
+          <button
+            key={tone.label}
+            type="button"
+            onClick={() => onChange(isActive ? "" : tone.label)}
+            aria-pressed={isActive}
+            title={isActive ? `Remove "${tone.label}" tone` : `Set tone to "${tone.label}"`}
+            className={`
+              px-3 py-1 rounded-full text-xs font-medium border transition-all duration-200
+              ${isActive
+                ? `${tone.activeClass} shadow-md scale-105`
+                : tone.inactiveClass
+              }
+            `}
+          >
+            {tone.emoji} {tone.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+};
+
+// ---------------------------------------------------------------------------
+// Main StoriesComponent
+// ---------------------------------------------------------------------------
 const StoriesComponent = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { register, handleSubmit, reset, setValue } = useForm<Inputs>();
+
   const draft = useMemo(() => {
     try {
       const saved = localStorage.getItem("story_spark_draft");
@@ -306,8 +409,9 @@ const StoriesComponent = () => {
   }, []);
 
   const [stories, setStories] = useState<IStories[]>(
-    draft?.stories?.length ? draft.stories : [{uuid:"test-1",title:"The Wizard's Journey",content:"Merlin walked through the forest toward the castle. The village was far behind him. He crossed the bridge over the river and entered the dungeon beneath the tower. Dragons guarded the mountain beyond the valley. Elena watched from the palace window as Merlin approached the cave near the ocean shore.",tag:"Fantasy",imageURL:"https://via.placeholder.com/400x300"}]
+    [{uuid:"test-1",title:"The Wizard's Journey",content:"Merlin walked through the forest toward the castle. The village was far behind him. He crossed the bridge over the river and entered the dungeon beneath the tower. Dragons guarded the mountain beyond the valley. Elena watched from the palace window as Merlin approached the cave near the ocean shore.",tag:"Fantasy",imageURL:"https://via.placeholder.com/400x300"}]
   );
+  
   const [loading, setLoading] = useState<boolean>(false);
   const { data } = useGetProfileInfoQuery(undefined);
   const userRole = getUserInfo();
@@ -316,21 +420,52 @@ const StoriesComponent = () => {
   const [generateFreeModel] = useGenerateFreeModelMutation();
   const [selectedPrompt, setSelectedPrompt] = useState<string>("");
   const [showHelpModal, setShowHelpModal] = useState(false);
-  const [selectedGenre, setSelectedGenre] = useState<string>(draft?.genre || "");
+ const [selectedGenre, setSelectedGenre] = useState<string>(
+  draft?.genre
+    ? (GENRES.find((g) => g.name === draft.genre || g.value === draft.genre)?.value ?? "")
+    : "",
+);
   const [selectedLength, setSelectedLength] = useState<string>(draft?.length || "medium");
+  const [selectedTone, setSelectedTone] = useState<ToneLabel | "">(draft?.tone || "");
   const [textareaValue, setTextareaValue] = useState<string>(location.state?.prompt || draft?.prompt || "");
   const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);
   const [selectedLanguage, setSelectedLanguage] = useState<string>(draft?.language || "English");
   const [isLanguageDropdownOpen, setIsLanguageDropdownOpen] = useState<boolean>(false);
+  
   const dropdownRef = useRef<HTMLDivElement>(null);
   const languageDropdownRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  
+  const playSoundtrack = (genre: string) => {
+    const soundtrack = soundtrackMap[genre];
+
+    if (!soundtrack) return;
+
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+    }
+
+    const audio = new Audio(soundtrack);
+    audio.loop = true;
+    audio.volume = 0.3;
+
+    audio.play().catch((err) => {
+      console.log("Audio playback failed:", err);
+    });
+
+    audioRef.current = audio;
+  };
+
   const activeGenerationRef = useRef<{ abort: () => void } | null>(null);
   const isGenerationInProgressRef = useRef(false);
   const [guestRequestCount, setGuestRequestCount] = useState<number>(() =>
-    parseInt(localStorage.getItem("guestRequestCount") || "0", 10),
+    parseInt(localStorage.getItem("guestRequestCount") || "0", 10)
   );
   const [showLimitModal, setShowLimitModal] = useState<boolean>(false);
+  const [isRecentPromptsOpen, setIsRecentPromptsOpen] = useState<boolean>(false);
+  const { recentPrompts, addPrompt, removePrompt, clearAll } = useRecentPrompts();
   const text = UI_TEXT[selectedLanguage] ?? UI_TEXT.English;
   const genreLabels = GENRE_LABELS[selectedLanguage] ?? GENRE_LABELS.English;
 
@@ -341,17 +476,26 @@ const StoriesComponent = () => {
   // Autosave Draft
   useEffect(() => {
     const timer = setTimeout(() => {
+      // stories intentionally excluded — API response, not user input
+      // including stories risks hitting localStorage quota (~5MB) silently
       const draftData = {
         prompt: textareaValue,
         genre: selectedGenre,
         length: selectedLength,
         language: selectedLanguage,
+        tone: selectedTone,
         stories: stories,
       };
-      localStorage.setItem("story_spark_draft", JSON.stringify(draftData));
+      try {
+        localStorage.setItem("story_spark_draft", JSON.stringify(draftData));
+      } catch (err) {
+        if (err instanceof DOMException && err.name === "QuotaExceededError") {
+          toast.error("Couldn't autosave draft — storage limit reached.");
+        }
+      }
     }, 1000);
     return () => clearTimeout(timer);
-  }, [textareaValue, selectedGenre, selectedLength, selectedLanguage, stories]);
+  }, [textareaValue, selectedGenre, selectedLength, selectedLanguage, selectedTone, stories]);
 
   useEffect(() => {
     const selectedLocale =
@@ -391,13 +535,24 @@ const StoriesComponent = () => {
       document.removeEventListener("keydown", handleKeyDown);
     };
   }, []);
-
-  useEffect(() => {
-    if (location.state && location.state.prompt) {
+useEffect(() => {
+  if (location.state) {
+    if (location.state.prompt) {
       setTextareaValue(location.state.prompt);
-      navigate(location.pathname, { replace: true, state: {} });
     }
-  }, [location, navigate]);
+
+    if (location.state.genre) {
+  const matchedGenre =
+    GENRES.find((g) => g.name === location.state.genre)?.value ?? "";
+  setSelectedGenre(matchedGenre);
+}
+
+    navigate(location.pathname, {
+      replace: true,
+      state: {},
+    });
+  }
+}, [location, navigate]);
 
   useEffect(() => {
     setValue("prompt", textareaValue);
@@ -426,7 +581,7 @@ const StoriesComponent = () => {
 
     if (getWordCount(data.prompt) < 10) {
       toast.error(
-        "Please enter a prompt with at least 10 words to generate a story.",
+        "Please enter a prompt with at least 10 words to generate a story."
       );
       return;
     }
@@ -439,10 +594,13 @@ const StoriesComponent = () => {
           ? `[Genre: ${selectedGenre}] ${data.prompt}`
           : data.prompt,
         wordLength:
-          selectedLength === "short" ? 150
-          : selectedLength === "long" ? 500
-          : 250,
+          selectedLength === "short"
+            ? 150
+            : selectedLength === "long"
+            ? 500
+            : 250,
         language: selectedLanguage,
+        tone: selectedTone || undefined,
       };
       const generationRequest = login
         ? generateModel(payload)
@@ -451,10 +609,14 @@ const StoriesComponent = () => {
       const res = await generationRequest.unwrap();
       if (res) {
         toast.success(res.message);
+        addPrompt(data.prompt);
         setStories(res.data as IStories[]);
+        setTextareaValue("");
         setSelectedPrompt("");
         setValue("prompt", "");
-        reset();
+        if (selectedGenre) {
+          playSoundtrack(selectedGenre);
+        }
         if (!login) {
           const newCount = guestRequestCount + 1;
           setGuestRequestCount(newCount);
@@ -556,9 +718,8 @@ const StoriesComponent = () => {
                 {getRequestLimit(userRole?.subscriptionType as string)}
               </span>
               <Link to="/pricing" className="border-1 border-white/20 pl-2 text-gray-300">
-               {text.upgrade}
+                {text.upgrade}
               </Link>
-              
               <i className="fas fa-bolt text-yellow-400"></i>
             </button>
             <div className="mt-3 text-slate-500 text-xs text-center md:text-right dark:text-gray-500">
@@ -583,254 +744,332 @@ const StoriesComponent = () => {
 
           <div className="max-w-3xl mx-auto px-4 sm:px-0">
             <div className="bg-gray-50 rounded-md p-4 border border-gray-200 text-slate-900 dark:bg-blue-500/10 dark:border-gray-400 dark:text-white">
-<div className="relative">
-  <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
-    <div className="flex flex-wrap gap-2 mb-3">
-      {GENRES.map((genre) => (
-        <button
-          key={genre.value}
-          type="button"
-          onClick={() =>
-            setSelectedGenre(selectedGenre === genre.value ? "" : genre.value)
-          }
-          className={`px-3 py-1 rounded-full text-xs font-medium transition-all duration-200 ${
-            selectedGenre === genre.value
-              ? "bg-indigo-500 text-white shadow-lg shadow-indigo-500/30"
-              : "bg-white/10 text-gray-400 hover:bg-white/20 hover:text-gray-200"
-          }`}
-        >
-          {genre.icon} {genreLabels[genre.name]}
-        </button>
-      ))}
-    </div>
+              <div className="relative">
+                <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
+                  
+                  {/* ── Genre chips ── */}
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    {GENRES.map((genre) => (
+                      <button
+                        key={genre.value}
+                        type="button"
+                        onClick={() => {
+                          const newGenre = selectedGenre === genre.value ? "" : genre.value;
+                          setSelectedGenre(newGenre);
+                          if (newGenre) {
+                            playSoundtrack(newGenre);
+                          } else if (audioRef.current) {
+                            audioRef.current.pause();
+                            audioRef.current.currentTime = 0;
+                          }
+                        }}
+                        className={`px-3 py-1 rounded-full text-xs font-medium transition-all duration-200 ${
+                          selectedGenre === genre.value
+                            ? "bg-indigo-500 text-white shadow-lg shadow-indigo-500/30"
+                            : "bg-white/10 text-gray-400 hover:bg-white/20 hover:text-gray-200"
+                        }`}
+                      >
+                        {genre.icon} {genreLabels[genre.name]}
+                      </button>
+                    ))}
+                  </div>
 
-    <div className="flex flex-wrap items-center gap-4 mb-3">
-      <div className="flex items-center gap-2">
-        <span className="text-xs text-gray-400 mr-1">📏 {text.length}:</span>
+                  {/* ── NEW: Tone picker ── */}
+                  <TonePicker selected={selectedTone} onChange={setSelectedTone} />
 
-        {(["short", "medium", "long"] as const).map((length) => (
-          <button
-            key={length}
-            type="button"
-            onClick={() => setSelectedLength(length)}
-            className={`px-3 py-1 rounded-full text-xs font-medium transition-all duration-200 ${
-              selectedLength === length
-                ? "bg-indigo-500 text-white shadow-lg shadow-indigo-500/30"
-                : "bg-white/10 text-gray-400 hover:bg-white/20 hover:text-gray-200"
-            }`}
-          >
-            {text[length]}
-          </button>
-        ))}
-      </div>
+                  {/* ── Length + Language row ── */}
+                  <div className="flex flex-wrap items-center gap-4 mb-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-gray-400 mr-1">📏 {text.length}:</span>
 
-      <div className="flex items-center gap-2 ml-0 sm:ml-auto">
-        <span className="text-xs text-gray-400 mr-1">🌐 {text.language}:</span>
-        <div className="relative" ref={languageDropdownRef}>
-          <button
-            key="lang-selector-btn"
-            type="button"
-            onClick={() => setIsLanguageDropdownOpen(!isLanguageDropdownOpen)}
-            className="flex items-center gap-2 px-3 py-1 bg-white/10 text-gray-300 border border-slate-700/50 rounded-full text-xs font-semibold hover:bg-white/20 transition-all duration-200 cursor-pointer"
-          >
-            <span>{LANGUAGES.find(l => l.name === selectedLanguage)?.name || "English"}</span>
-            <span className="text-gray-400 text-[10px]">▼</span>
-          </button>
+                      {(["short", "medium", "long"] as const).map((length) => (
+                        <button
+                          key={length}
+                          type="button"
+                          onClick={() => setSelectedLength(length)}
+                          className={`px-3 py-1 rounded-full text-xs font-medium transition-all duration-200 ${
+                            selectedLength === length
+                              ? "bg-indigo-500 text-white shadow-lg shadow-indigo-500/30"
+                              : "bg-white/10 text-gray-400 hover:bg-white/20 hover:text-gray-200"
+                          }`}
+                        >
+                          {text[length]}
+                        </button>
+                      ))}
+                    </div>
 
-          {isLanguageDropdownOpen && (
-            <ul className="absolute right-0 z-20 mt-1 max-h-48 w-36 overflow-y-auto bg-slate-800 border border-slate-700/50 rounded-lg shadow-xl focus:outline-none divide-y divide-slate-700/30">
-              {LANGUAGES.map((lang) => (
-                <li key={lang.code}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSelectedLanguage(lang.name);
-                      setIsLanguageDropdownOpen(false);
-                    }}
-                    className={`w-full text-left px-3 py-2 text-xs transition-colors duration-150 cursor-pointer ${
-                      selectedLanguage === lang.name
-                        ? "bg-indigo-600 text-white font-bold"
-                        : "text-gray-400 hover:bg-indigo-600/50 hover:text-white"
-                    }`}
-                  >
-                    {lang.name}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      </div>
-    </div>
+                    <div className="flex items-center gap-2 ml-0 sm:ml-auto">
+                      <span className="text-xs text-gray-400 mr-1">🌐 {text.language}:</span>
+                      <div className="relative" ref={languageDropdownRef}>
+                        <button
+                          key="lang-selector-btn"
+                          type="button"
+                          onClick={() => setIsLanguageDropdownOpen(!isLanguageDropdownOpen)}
+                          className="flex items-center gap-2 px-3 py-1 bg-white/10 text-gray-300 border border-slate-700/50 rounded-full text-xs font-semibold hover:bg-white/20 transition-all duration-200 cursor-pointer"
+                        >
+                          <span>{LANGUAGES.find(l => l.name === selectedLanguage)?.name || "English"}</span>
+                          <span className="text-gray-400 text-[10px]">▼</span>
+                        </button>
 
-    <div className="relative">
-      <textarea
-  {...register("prompt")}
-  ref={(el) => {
-    register("prompt").ref(el);
-    inputRef.current = el;
-  }}
-        className={`w-full h-32 sm:h-40 resize-none border-none outline-none bg-transparent text-gray-800 dark:text-gray-200 focus:ring-0 text-lg leading-relaxed tracking-wide placeholder:italic placeholder:text-gray-500 dark:placeholder:text-gray-400 pr-10 transition-colors duration-200 ${
-          isOverLimit
-            ? "ring-1 ring-red-500 rounded"
-            : isNearLimit
-            ? "ring-1 ring-yellow-400 rounded"
-            : ""
-        }`}
-        placeholder={text.promptPlaceholder}
-        value={textareaValue}
-        maxLength={MAX_PROMPT_LENGTH}
-        onChange={(e) => setTextareaValue(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" && !e.shiftKey) {
-            e.preventDefault();
-            const form = e.currentTarget.closest("form");
-            if (form) form.requestSubmit();
-          }
-        }}
-        />
+                        {isLanguageDropdownOpen && (
+                          <ul className="absolute right-0 z-20 mt-1 max-h-48 w-36 overflow-y-auto bg-slate-800 border border-slate-700/50 rounded-lg shadow-xl focus:outline-none divide-y divide-slate-700/30">
+                            {LANGUAGES.map((lang) => (
+                              <li key={lang.code}>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedLanguage(lang.name);
+                                    setIsLanguageDropdownOpen(false);
+                                  }}
+                                  className={`w-full text-left px-3 py-2 text-xs transition-colors duration-150 cursor-pointer ${
+                                    selectedLanguage === lang.name
+                                      ? "bg-indigo-600 text-white font-bold"
+                                      : "text-gray-400 hover:bg-indigo-600/50 hover:text-white"
+                                  }`}
+                                >
+                                  {lang.name}
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                    </div>
+                  </div>
 
-      {textareaValue.length > 0 && (
-        <button
-          type="button"
-          onClick={handleClearPrompt}
-          className="absolute right-2 top-2 text-gray-400 hover:text-red-500 transition-colors duration-200"
-          aria-label={text.close}
-          title={text.close}
-        >
-          <svg
-            className="w-5 h-5"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M6 18L18 6M6 6l12 12"
-            />
-          </svg>
-        </button>
-      )}
+                  {/* ── Prompt textarea ── */}
+                  <div className="relative">
+                    <textarea
+                      {...register("prompt")}
+                      ref={(el) => {
+                        register("prompt").ref(el);
+                        inputRef.current = el;
+                      }}
+                      className={`w-full h-32 sm:h-40 resize-none border-none outline-none bg-transparent text-gray-800 dark:text-gray-200 focus:ring-0 text-lg leading-relaxed tracking-wide placeholder:italic placeholder:text-gray-500 dark:placeholder:text-gray-400 pr-10 transition-colors duration-200 ${
+                        isOverLimit
+                          ? "ring-1 ring-red-500 rounded"
+                          : isNearLimit
+                          ? "ring-1 ring-yellow-400 rounded"
+                          : ""
+                      }`}
+                      placeholder={text.promptPlaceholder}
+                      value={textareaValue}
+                      maxLength={MAX_PROMPT_LENGTH}
+                      onChange={(e) => setTextareaValue(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && !e.shiftKey) {
+                          e.preventDefault();
+                          const form = e.currentTarget.closest("form");
+                          if (form) form.requestSubmit();
+                        }
+                      }}
+                    />
 
-      <div className="flex items-center justify-between mt-1 px-1">
-        {isOverLimit ? (
-          <p className="text-xs text-red-400 flex items-center gap-1">
-            <span>⚠</span> {text.characterLimit}
-          </p>
-        ) : isNearLimit ? (
-          <p className="text-xs text-yellow-400 flex items-center gap-1">
-            <span>⚠</span>{" "}
-            {MAX_PROMPT_LENGTH - textareaValue.length} {text.charactersRemaining}
-          </p>
-        ) : (
-          <span />
-        )}
+                    {textareaValue.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={handleClearPrompt}
+                        className="absolute right-2 top-2 text-gray-400 hover:text-red-500 transition-colors duration-200"
+                        aria-label={text.close}
+                        title={text.close}
+                      >
+                        <svg
+                          className="w-5 h-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M6 18L18 6M6 6l12 12"
+                          />
+                        </svg>
+                      </button>
+                    )}
 
-        <span
-          className={`text-xs tabular-nums ml-auto ${
-            isOverLimit
-              ? "text-red-400 font-medium"
-              : isNearLimit
-              ? "text-yellow-400"
-              : "text-gray-500"
-          }`}
-        >
-          {textareaValue.length} / {MAX_PROMPT_LENGTH}
-        </span>
-      </div>
-    </div>
+                    <button
+                      type="button"
+                      onClick={() => setIsRecentPromptsOpen(!isRecentPromptsOpen)}
+                      className="absolute right-2 top-12 bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 rounded-lg text-sm transition-colors duration-200 flex items-center gap-2"
+                      aria-label={text.recentPrompts}
+                      title={text.recentPrompts}
+                    >
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
+                      </svg>
+                      {text.recentPrompts}
+                    </button>
 
-    <p className="text-xs text-gray-500 mt-1 px-1">
-      💡  <span className="font-medium">{text.keyboardTip}</span> {text.press}{" "}
-      <kbd className="px-1 py-0.5 text-xs bg-gray-700 rounded border border-gray-600">
-        Enter
-      </kbd>{" "}
-      {text.toGenerate} &bull;{" "}
-      <kbd className="px-1 py-0.5 text-xs bg-gray-700 rounded border border-gray-600">
-        Ctrl + Enter
-      </kbd>{" "}
-      {text.alsoWorks} &bull;{" "}
-      <kbd className="px-1 py-0.5 text-xs bg-gray-700 rounded border border-gray-600">
-        Shift + Enter
-      </kbd>{" "}
-      {text.forNewLine}
-    </p>
+                    <div className="flex items-center justify-between mt-1 px-1">
+                      {isOverLimit ? (
+                        <p className="text-xs text-red-400 flex items-center gap-1">
+                          <span>⚠</span> {text.characterLimit}
+                        </p>
+                      ) : isNearLimit ? (
+                        <p className="text-xs text-yellow-400 flex items-center gap-1">
+                          <span>⚠</span>{" "}
+                          {MAX_PROMPT_LENGTH - textareaValue.length} {text.charactersRemaining}
+                        </p>
+                      ) : (
+                        <span />
+                      )}
 
-    <div className="flex justify-end mt-2 w-full">
-      <button
-        type="submit"
-        disabled={loading || isOverLimit}
-        aria-busy={loading}
-        aria-disabled={loading || isOverLimit}
-        className={`rounded-lg bg-gradient-to-r from-blue-400 to-indigo-500 text-gray-200 px-6 py-3 font-semibold ${
-          loading || isOverLimit
-            ? "opacity-50 cursor-not-allowed"
-            : "cursor-pointer hover:shadow-lg hover:shadow-indigo-500/50 hover:scale-105"
-        } transition-all duration-300 transform flex items-center space-x-2 group`}
-      >
-        <i className="fas fa-wand-magic-sparkles text-xl transition-transform duration-300 group-hover:animate-wiggle"></i>
-        {loading ? text.generating : text.generate}
-      </button>
-    </div>
-  </form>
-</div>
+                      <span
+                        className={`text-xs tabular-nums ml-auto ${
+                          isOverLimit
+                            ? "text-red-400 font-medium"
+                            : isNearLimit
+                            ? "text-yellow-400"
+                            : "text-gray-500"
+                        }`}
+                      >
+                        {textareaValue.length} / {MAX_PROMPT_LENGTH}
+                      </span>
+                    </div>
+                  </div>
+
+                  <p className="text-xs text-gray-500 mt-1 px-1">
+                    💡 <span className="font-medium">{text.keyboardTip}</span> {text.press}{" "}
+                    <kbd className="px-1 py-0.5 text-xs bg-gray-700 rounded border border-gray-600">
+                      Enter
+                    </kbd>{" "}
+                    {text.toGenerate} &bull;{" "}
+                    <kbd className="px-1 py-0.5 text-xs bg-gray-700 rounded border border-gray-600">
+                      Ctrl + Enter
+                    </kbd>{" "}
+                    {text.alsoWorks} &bull;{" "}
+                    <kbd className="px-1 py-0.5 text-xs bg-gray-700 rounded border border-gray-600">
+                      Shift + Enter
+                    </kbd>{" "}
+                    {text.forNewLine}
+                  </p>
+
+                  {/* ── Generate button row ── */}
+                  <div className="flex items-center justify-between mt-2 w-full">
+                    {/* Active tone badge */}
+                    <div className="flex items-center gap-2 text-xs text-gray-400">
+                      {selectedTone && (
+                        <span className="flex items-center gap-1 px-2 py-1 rounded-full bg-white/10 border border-white/10">
+                          {TONES.find((t) => t.label === selectedTone)?.emoji}{" "}
+                          <span className="font-medium">{selectedTone}</span>
+                          <button
+                            type="button"
+                            onClick={() => setSelectedTone("")}
+                            className="ml-1 text-gray-500 hover:text-red-400 transition-colors"
+                            aria-label="Remove tone"
+                          >
+                            ×
+                          </button>
+                        </span>
+                      )}
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={loading || isOverLimit}
+                      aria-busy={loading}
+                      aria-disabled={loading || isOverLimit}
+                      className={`rounded-lg bg-gradient-to-r from-blue-400 to-indigo-500 text-gray-200 px-6 py-3 font-semibold ${
+                        loading || isOverLimit
+                          ? "opacity-50 cursor-not-allowed"
+                          : "cursor-pointer hover:shadow-lg hover:shadow-indigo-500/50 hover:scale-105"
+                      } transition-all duration-300 transform flex items-center space-x-2 group`}
+                    >
+                      <i className="fas fa-wand-magic-sparkles text-xl transition-transform duration-300 group-hover:animate-wiggle"></i>
+                      {loading ? text.generating : text.generate}
+                    </button>
+                  </div>
+                </form>
+              </div>
             </div>
 
             <div className="w-full max-w-2xl m-auto mt-4">
-          <h1 className="text-sm text-slate-500 mb-1 dark:text-gray-500">
-    {text.examples}
-  </h1>
+              <h1 className="text-sm text-slate-500 mb-1 dark:text-gray-500">
+                {text.examples}
+              </h1>
 
-  <div className="relative" ref={dropdownRef}>
-    <button
-      type="button"
-      onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-      className="w-full p-3 bg-slate-800 text-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 flex items-center justify-between text-sm text-left transition-all duration-200"
-    >
-      <span className="truncate pr-4">
-        {selectedPrompt || text.selectPrompt}
-      </span>
+              <div className="relative" ref={dropdownRef}>
+                <button
+                  type="button"
+                  onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                  className="w-full p-3 bg-slate-800 text-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 flex items-center justify-between text-sm text-left transition-all duration-200"
+                >
+                  <span className="truncate pr-4">
+                    {selectedPrompt || text.selectPrompt}
+                  </span>
 
-      <span
-        className={`text-gray-300 transition-transform duration-200 ${
-          isDropdownOpen ? "rotate-180" : ""
-        }`}
-      >
-        ▼
-      </span>
-    </button>
+                  <span
+                    className={`text-gray-300 transition-transform duration-200 ${
+                      isDropdownOpen ? "rotate-180" : ""
+                    }`}
+                  >
+                    ▼
+                  </span>
+                </button>
 
-    {isDropdownOpen && (
-      <ul className="relative z-10 w-full mt-1 max-h-60 overflow-y-auto bg-slate-800 border border-slate-700/50 rounded-lg shadow-xl focus:outline-none divide-y divide-slate-700/30">
-        {prompts.map((item) => (
-          <li key={item.id}>
-            <button
-              type="button"
-              onClick={() => {
-                setSelectedPrompt(item.prompt);
-                setTextareaValue(item.prompt);
-                setIsDropdownOpen(false);
-              }}
-              className="w-full text-left px-4 py-3 text-sm text-gray-400 hover:bg-indigo-600 hover:text-white transition-colors duration-150 whitespace-normal break-words leading-relaxed"
-            >
-              {item.prompt}
-            </button>
-          </li>
-        ))}
-      </ul>
-    )}
-  </div>
-</div>
+                {isDropdownOpen && (
+                  <ul className="relative z-10 w-full mt-1 max-h-60 overflow-y-auto bg-slate-800 border border-slate-700/50 rounded-lg shadow-xl focus:outline-none divide-y divide-slate-700/30">
+                    {prompts.map((item) => (
+                      <li key={item.id}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedPrompt(item.prompt);
+                            setTextareaValue(item.prompt);
+                            setIsDropdownOpen(false);
+                          }}
+                          className="w-full text-left px-4 py-3 text-sm text-gray-400 hover:bg-indigo-600 hover:text-white transition-colors duration-150 whitespace-normal break-words leading-relaxed"
+                        >
+                          {item.prompt}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
+      {/* Recent Prompts Panel */}
+      <RecentPromptsPanel
+        recentPrompts={recentPrompts}
+        onSelectPrompt={(prompt) => {
+          setTextareaValue(prompt);
+          setValue("prompt", prompt);
+          setIsRecentPromptsOpen(false);
+        }}
+        onRemovePrompt={removePrompt}
+        onClearAll={clearAll}
+        isOpen={isRecentPromptsOpen}
+        onToggle={() => setIsRecentPromptsOpen(!isRecentPromptsOpen)}
+        text={{
+          recentPrompts: text.recentPrompts,
+          usePrompt: text.usePrompt,
+          delete: text.delete,
+          clearAll: text.clearAll,
+          noRecentPrompts: text.noRecentPrompts,
+          close: text.close,
+        }}
+      />
+
       {showHelpModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-            <div className="bg-white border border-gray-200 rounded-2xl p-6 max-w-md w-full text-slate-900 dark:bg-slate-900 dark:border-slate-700 dark:text-white">
-              <h2 className="text-xl font-bold text-slate-900 mb-4 dark:text-white">
+          <div className="bg-white border border-gray-200 rounded-2xl p-6 max-w-md w-full text-slate-900 dark:bg-slate-900 dark:border-slate-700 dark:text-white">
+            <h2 className="text-xl font-bold text-slate-900 mb-4 dark:text-white">
               {text.shortcuts}
             </h2>
 
@@ -852,7 +1091,9 @@ const StoriesComponent = () => {
         </div>
       )}
 
-      {loading && <StoryGeneratingAnimation onCancel={handleCancelGeneration} />}
+      {loading && (
+        <StoryGeneratingAnimation onCancel={handleCancelGeneration} />
+      )}
       <StoriesViewComponent
         stories={stories}
         isLogin={login}

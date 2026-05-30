@@ -16,18 +16,10 @@ const WriterFeedbackComponent = () => {
   }
 
   return (
-    <section className="story-section">
-      <div className="story-page-shell">
-        <div className="mx-auto mb-10 max-w-2xl text-center sm:mb-12">
-          <h2 className="story-section-heading">
-            What Our Writers Say
-          </h2>
-
-          <p className="story-section-copy mt-4">
     <section className="mb-16 py-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold text-slate-900 dark:text-gray-300">
+          <h2 className="text-3xl font-bold text-slate-900 dark:text-gray-305">
             What Our Writers Say
           </h2>
 
@@ -49,14 +41,8 @@ const WriterFeedbackComponent = () => {
                   alt={writer.name}
                 />
 
-                <div className="ml-4 min-w-0">
-                  <h4 className="truncate text-lg font-bold text-slate-200">
-                    {writer.name}
-                  </h4>
-
-                  <p className="text-sm text-slate-500">
                 <div className="ml-4">
-                  <h4 className="text-lg font-semibold text-slate-700 dark:text-gray-400">
+                  <h4 className="text-lg font-semibold text-slate-700 dark:text-gray-450">
                     {writer.name}
                   </h4>
 
@@ -66,7 +52,6 @@ const WriterFeedbackComponent = () => {
                 </div>
               </div>
 
-              <p className="leading-relaxed text-slate-400 italic">
               <p className="text-slate-600 dark:text-gray-500 italic">
                 &#34;{writer.feedback}&#34;
               </p>
