@@ -864,6 +864,16 @@ useEffect(() => {
                         }
                       }}
                     />
+                    {/* Character count display */}
+<div className={`flex justify-end mt-1 text-xs font-medium transition-colors duration-200 ${
+  isOverLimit
+    ? "text-red-500"
+    : isNearLimit
+    ? "text-yellow-500"
+    : "text-gray-400"
+}`}>
+  {textareaValue.length} / {MAX_PROMPT_LENGTH}
+</div>
 
                     {textareaValue.length > 0 && (
                       <button
