@@ -1,3 +1,4 @@
+// THE CORRECTED CODE SNIPPET FOR REACTION SERVICE
 import ApiError from "../../../errors/api_error";
 import { ITokenPayload } from "../../../interfaces/token";
 import { User } from "../user/user.model";
@@ -16,7 +17,10 @@ const toggleReaction = async (
   if (!user) {
     throw new ApiError(httpStatus.BAD_REQUEST, "User not found!");
   }
-  const post = await Post.findOne({ _id: postId, isDeleted: { $ne: true } });
+  const post = await Post.findOne({
+    _id: postId,
+    isDeleted: { $ne: true },
+  });
   if (!post) {
     throw new ApiError(httpStatus.BAD_REQUEST, "Post not found!");
   }
@@ -27,7 +31,6 @@ const toggleReaction = async (
   });
 
   if (existingReaction) {
-    // Remove reaction atomically
     await Reaction.findByIdAndDelete(existingReaction._id);
     const updatedPost = await Post.findOneAndUpdate(
       { _id: postId },
@@ -37,7 +40,6 @@ const toggleReaction = async (
       },
       { new: true }
     );
-    // Ensure likesCount never goes below 0
     if (updatedPost && updatedPost.likesCount < 0) {
       await Post.updateOne({ _id: postId }, { $set: { likesCount: 0 } });
     }
@@ -46,7 +48,6 @@ const toggleReaction = async (
       likesCount: Math.max(0, updatedPost?.likesCount ?? 0),
     };
   } else {
-    // Add reaction atomically
     const newReaction = await Reaction.create({
       postId: new Types.ObjectId(postId),
       userId: user._id,
