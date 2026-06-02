@@ -1,9 +1,47 @@
 import { useNavigate } from "react-router-dom";
 
 const plans = [
-  { title: "Free", price: "$0", duration: "/month", features: ["Basic AI assistance", "5 stories per month"], linkTo: "/signup", buttonLabel: "Get Started" },
-  { title: "Pro", price: "$19", duration: "/month", features: ["Unlimited stories", "Priority support"], linkTo: "/payment?plan=Pro&price=19", buttonLabel: "Start Pro Trial" },
-  { title: "Enterprise", price: "$49", duration: "/month", features: ["Team collaboration", "API access"], linkTo: "/contact-us", buttonLabel: "Contact Sales" },
+  {
+    title: "Free",
+    price: "$0",
+    duration: "/month",
+    features: [
+      "✓ 5 stories per month",
+      "✓ Basic AI model access",
+      "✓ Standard community support",
+      "✓ Export to Plain Text",
+    ],
+    linkTo: "/signup",
+    buttonLabel: "Get Started",
+  },
+  {
+    title: "Pro",
+    price: "$19",
+    duration: "/month",
+    features: [
+      "✓ Unlimited story generation",
+      "✓ Advanced AI models (GPT-4 / Claude 3)",
+      "✓ Priority email support",
+      "✓ Advanced Markdown & PDF exports",
+      "✓ Commercial usage rights",
+    ],
+    linkTo: "/payment?plan=Pro&price=19",
+    buttonLabel: "Start Pro Trial",
+  },
+  {
+    title: "Enterprise",
+    price: "$49",
+    duration: "/month",
+    features: [
+      "✓ Everything in Pro",
+      "✓ Real-time team collaboration",
+      "✓ Dedicated account manager",
+      "✓ Full API access",
+      "✓ Custom model fine-tuning",
+    ],
+    linkTo: "/contact-us",
+    buttonLabel: "Contact Sales",
+  },
 ];
 
 const PricingComponent = () => {

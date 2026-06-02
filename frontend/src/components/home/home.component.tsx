@@ -13,6 +13,7 @@ import Contactus from "../contactus/contactus";
 import PersonalizedRecommendationsComponent from "./personalized_recommendations/personalized_recommendations.component";
 import { isLoggedIn } from "../../services/auth.service";
 import ScrollToTopButton from "../ScrollToTopButton";
+import BackToTop from "../back_home/back_to_top.component";
 
 const containerVariants = {
   hidden: { opacity: 0 },
