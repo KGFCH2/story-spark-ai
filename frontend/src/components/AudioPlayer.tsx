@@ -45,7 +45,6 @@ const AudioPlayer = forwardRef<AudioPlayerHandle, AudioPlayerProps>(
   ({ text, title = "Story narration", onWordIndexChange, onPlaybackStateChange }, ref) => {
     const [voiceGender, setVoiceGender] = useState<"female" | "male">("female");
     const speech = useSpeechSynthesis(text, voiceGender);
-    const speech = useSpeechSynthesis(text);
     const preview = useVoicePreview();
     const favorites = useVoiceFavorites();
     const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
@@ -225,7 +224,7 @@ const AudioPlayer = forwardRef<AudioPlayerHandle, AudioPlayerProps>(
                 <div className="flex items-center justify-between text-sm text-slate-600 dark:text-slate-400">
                   <span>Progress</span>
                   <span aria-live="polite">
-                    {spokenWordCount} / {speech.progress.totalWords} words
+                    {speech.isPlaying || speech.isPaused ? spokenWordCount : 0} / {speech.progress.totalWords} words
                   </span>
                 </div>
                 <div
