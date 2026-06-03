@@ -1778,6 +1778,8 @@ if (isLoading) {
                 <img
                   src={selectedStory.coverImage}
                   alt={selectedStory.title}
+                  loading="lazy"
+                  decoding="async"
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                 />
               </div>
@@ -1832,15 +1834,7 @@ if (isLoading) {
               </div>
             )}
 
-            {selectedStory.coverImage && (
-              <div className="w-full h-64 sm:h-80 md:h-96 rounded-2xl overflow-hidden mb-6 relative group select-none">
-                <img
-                  src={selectedStory.coverImage}
-                  alt={selectedStory.title}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                />
-              </div>
-            )}
+
 
             <div id="story-content" className="w-full text-slate-700 dark:text-slate-300 text-sm sm:text-base leading-relaxed tracking-wide font-medium">
               <p className="break-words whitespace-pre-wrap m-0">

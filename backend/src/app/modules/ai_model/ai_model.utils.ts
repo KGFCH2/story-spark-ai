@@ -185,22 +185,28 @@ export async function generateWithGeminiStories(
       }
     });
 
-    // Fetch cover images for stories concurrently (using generateStoryboardImage or fetchImageURL fallback)
-    const coverImagePromises = stories.map(async (story) => {
+    // Fetch cover images for stories sequentially
+    const coverImages: string[] = [];
+    for (const story of stories) {
       try {
-        const generated = await generateStoryboardImage(`Cover illustration for a book titled: ${story?.title}. Theme: ${story?.tag}. Style: cinematic, detailed`);
-        if (generated) return generated;
+        const promptTitle = story?.title ? story.title : story?.tag ? story.tag : "Untitled";
+        const promptTag = story?.tag || "General";
+        const generated = await generateStoryboardImage(`Cover illustration for a book titled: ${promptTitle}. Theme: ${promptTag}. Style: cinematic, detailed`);
+        if (generated) {
+          coverImages.push(generated);
+          continue;
+        }
         const imageResponse = await fetchImageURL(String(story?.title ?? story?.tag ?? ""));
-        return imageResponse?.imageUrl || "";
+        coverImages.push(imageResponse?.imageUrl || "");
       } catch (e) {
-        return "";
+        const errorMsg = e instanceof Error ? e.message : String(e);
+        const logTitle = story?.title || story?.tag || "Unknown Story";
+        console.error(`[AI] Failed to generate cover image for "${logTitle}": ${errorMsg}`);
+        coverImages.push("");
       }
-    });
+    }
     
-    const [imageUrls, coverImages] = await Promise.all([
-      Promise.all(imagePromises),
-      Promise.all(coverImagePromises),
-    ]);
+    const imageUrls = await Promise.all(imagePromises);
 
     return stories.map((story, index) => ({
       ...story,
