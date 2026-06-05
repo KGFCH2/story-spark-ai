@@ -244,7 +244,7 @@ const SignUpComponent = () => {
         </div>
 
         <div className="bg-slate-800/60 backdrop-blur-xl border border-slate-700/50 rounded-2xl p-6 sm:p-8 shadow-2xl w-full min-w-0 overflow-hidden">
-          <h3 className="text-center text-2xl font-bold tracking-tight text-slate-200">
+          <h3 className="text-center text-2xl font-bold tracking-tight text-slate-200"></h3>
         <div className="flex justify-center items-center gap-40">
         
                 <div className="flex flex-col gap-5">
