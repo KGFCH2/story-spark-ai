@@ -14,6 +14,12 @@ const HelpHero: FC<HelpHeroProps> = ({
   onSearchChange,
   resultCount,
 }) => {
+  const handleSearchChange = (value: string) => {
+    if (onSearchChange) {
+      onSearchChange(value);
+    }
+  };
+
   return (
     <section
       id="help-hero"
@@ -57,11 +63,18 @@ const HelpHero: FC<HelpHeroProps> = ({
           transition={{ duration: 0.6 }}
         >
           <div className="inline-flex items-center justify-center mx-auto px-4 py-1.5 mb-5 sm:mb-6 rounded-full border border-blue-500/10 dark:border-white/10 bg-blue-500/5 text-blue-600 dark:text-blue-400 select-none shadow-sm dark:shadow-none">
+        {/* Main Content */}
+        <div className="text-center max-w-4xl mx-auto">
+          <motion.div
+            className="inline-flex items-center justify-center mx-auto px-4 py-1.5 mb-5 sm:mb-6 rounded-full border border-blue-500/10 dark:border-white/10 bg-blue-500/5 text-blue-600 dark:text-blue-400 select-none shadow-sm dark:shadow-none transition-colors duration-300"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+          >
             <span className="text-xs font-bold uppercase tracking-wider">Support & Guidance</span>
             <span className="ml-2 text-xs flex items-center justify-center">
               <i className="fa-solid fa-circle-question" aria-hidden="true"></i>
             </span>
-          </div>
+          </motion.div>
 
           <h1
             id="help-center-title"

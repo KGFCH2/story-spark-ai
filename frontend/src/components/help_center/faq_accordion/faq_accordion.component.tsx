@@ -98,6 +98,7 @@ const FAQAccordion: FC<FAQAccordionProps> = ({ items }) => {
                     transition={{ duration: 0.3 }}
                     className="overflow-hidden"
                   >
+
                     <div className="px-6 pb-6">
                       <div className="rounded-xl bg-slate-50 dark:bg-slate-900/40 border border-slate-100 dark:border-white/5 p-5">
                         <p className="text-slate-700 dark:text-slate-300 leading-relaxed text-sm">

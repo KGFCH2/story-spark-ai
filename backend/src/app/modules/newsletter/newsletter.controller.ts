@@ -6,8 +6,9 @@ import { status as httpStatus } from "http-status";
 export const subscribe = async (req: Request, res: Response) => {
   try {
     const { email, name, source } = req.body;
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-    if (!email || !email.includes("@")) {
+    if (!email || !emailRegex.test(String(email).trim())) {
       return res.status(400).json({ message: "Valid email is required." });
     }
 
@@ -37,6 +38,7 @@ export const subscribe = async (req: Request, res: Response) => {
     });
   }
 };
+
 // Verify newsletter subscription token
 export const verify = async (req: Request, res: Response) => {
   try {
@@ -70,5 +72,9 @@ export const unsubscribeByToken = async (req: Request, res: Response) => {
       message: "Failed to unsubscribe",
       error,
     });
+    const result = await newsletterService.unsubscribeByToken(safeToken);
+    res.status(200).json(result);
+  } catch (err: any) {
+    res.status(400).json({ message: err.message });
   }
 };
