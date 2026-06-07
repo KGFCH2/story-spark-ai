@@ -1,5 +1,6 @@
-import { useEffect, useState, type FC } from "react";
+import { useEffect, useRef, useState, type FC } from "react";
 import { Link } from "react-router-dom";
+import { useTheme } from "../theme/theme.context";
 
 const COOKIE_CONSENT_KEY = "storysparkai_cookie_consent";
 
@@ -25,14 +26,26 @@ const loadCookiePreferences = (): CookiePreferences => {
   }
 };
 
+const updateAppCookieState = (preferences: CookiePreferences) => {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new CustomEvent("cookieConsentChange", { detail: preferences }));
+};
+
 const saveCookiePreferences = (preferences: CookiePreferences) => {
   if (typeof window === "undefined") return;
   window.localStorage.setItem(COOKIE_CONSENT_KEY, JSON.stringify(preferences));
+  updateAppCookieState(preferences);
 };
 
-const CookieConsentBanner: FC = () => {
+type CookieConsentBannerProps = {
+  onLayoutChange?: (height: number) => void;
+};
+
+const CookieConsentBanner: FC<CookieConsentBannerProps> = ({ onLayoutChange }) => {
+  const bannerRef = useRef<HTMLDivElement>(null);
   const [preferences, setPreferences] = useState<CookiePreferences | null>(null);
   const [showBanner, setShowBanner] = useState(false);
+  const { isDark } = useTheme();
 
   useEffect(() => {
     const storedPreferences = loadCookiePreferences();
@@ -40,16 +53,34 @@ const CookieConsentBanner: FC = () => {
     setShowBanner(!storedPreferences.saved);
   }, []);
 
+  useEffect(() => {
+    if (!showBanner) {
+      onLayoutChange?.(0);
+      return;
+    }
+
+    const updateLayout = () => {
+      const banner = bannerRef.current;
+      if (!banner) return;
+      onLayoutChange?.(banner.getBoundingClientRect().height);
+    };
+
+    updateLayout();
+    const observer = new ResizeObserver(updateLayout);
+    if (bannerRef.current) {
+      observer.observe(bannerRef.current);
+    }
+    window.addEventListener("resize", updateLayout);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", updateLayout);
+    };
+  }, [onLayoutChange, showBanner]);
+
   if (!preferences || !showBanner) {
     return null;
   }
-
-  const handleSave = () => {
-    const updated = { ...preferences, saved: true };
-    setPreferences(updated);
-    setShowBanner(false);
-    saveCookiePreferences(updated);
-  };
 
   const handleAcceptAll = () => {
     const updated = { saved: true, functional: true, analytics: true };
@@ -65,82 +96,46 @@ const CookieConsentBanner: FC = () => {
     saveCookiePreferences(updated);
   };
 
+  const bannerClasses = isDark
+    ? "fixed inset-x-0 bottom-0 z-50 bg-slate-950/95 border-t border-white/10 shadow-2xl backdrop-blur-xl text-white"
+    : "fixed inset-x-0 bottom-0 z-50 bg-white/95 border-t border-slate-200 shadow-2xl backdrop-blur-xl text-slate-900";
+
   return (
-    <div className="fixed inset-x-0 bottom-0 z-50 bg-slate-950/95 border-t border-slate-700 py-5 shadow-2xl backdrop-blur-xl text-white">
-      <div className="mx-auto flex max-w-6xl flex-col gap-5 px-4 sm:px-6 lg:px-8 xl:flex-row xl:items-start xl:justify-between xl:gap-8">
+    <div ref={bannerRef} className="fixed inset-x-0 bottom-0 z-50 px-4 pb-4 text-white sm:px-6 lg:px-8">
+      <div className="mx-auto flex max-h-[82vh] max-w-5xl flex-col gap-4 overflow-y-auto rounded-2xl border border-slate-700 bg-slate-950/95 p-4 shadow-2xl backdrop-blur-xl sm:p-5 xl:flex-row xl:items-start xl:justify-between xl:gap-6">
         <div className="max-w-3xl space-y-3">
-          <p className="text-sm uppercase tracking-[0.28em] text-slate-400">Cookie Preferences</p>
-          <h2 className="text-2xl font-semibold text-white">Manage your cookie settings</h2>
-          <p className="text-slate-300 leading-7">
-            StorySpark AI uses cookies to keep the experience secure and smooth. Select which cookie categories you want to allow, or accept all for the best experience.
-            <Link to="/cookie-policy" className="ml-1 text-blue-300 underline hover:text-blue-200">Learn more</Link>.
-          </p>
-          <div className="rounded-3xl border border-slate-700 bg-slate-900/90 p-4">
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="rounded-2xl border border-slate-700 bg-slate-950 p-4">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <p className="font-semibold text-white">Essential Cookies</p>
-                    <p className="text-sm text-slate-400">Always active for secure login and basic app functionality.</p>
-                  </div>
-                  <span className="rounded-full bg-emerald-500/15 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-300">Required</span>
-                </div>
-              </div>
-              <div className="rounded-2xl border border-slate-700 bg-slate-950 p-4">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <p className="font-semibold text-white">Functional Cookies</p>
-                    <p className="text-sm text-slate-400">Enable saved preferences and smoother navigation.</p>
-                  </div>
-                  <label className="inline-flex items-center gap-2 text-sm text-slate-300">
-                    <input
-                      type="checkbox"
-                      checked={preferences.functional}
-                      onChange={(event) => setPreferences({ ...preferences, functional: event.target.checked })}
-                      className="h-5 w-5 rounded border-slate-600 bg-slate-800 text-blue-400 focus:ring-blue-400"
-                    />
-                    <span>{preferences.functional ? "On" : "Off"}</span>
-                  </label>
-                </div>
-              </div>
-              <div className="rounded-2xl border border-slate-700 bg-slate-950 p-4 sm:col-span-2">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <p className="font-semibold text-white">Analytics Cookies</p>
-                    <p className="text-sm text-slate-400">Help us understand usage and improve StorySpark AI.</p>
-                  </div>
-                  <label className="inline-flex items-center gap-2 text-sm text-slate-300">
-                    <input
-                      type="checkbox"
-                      checked={preferences.analytics}
-                      onChange={(event) => setPreferences({ ...preferences, analytics: event.target.checked })}
-                      className="h-5 w-5 rounded border-slate-600 bg-slate-800 text-blue-400 focus:ring-blue-400"
-                    />
-                    <span>{preferences.analytics ? "On" : "Off"}</span>
-                  </label>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="flex flex-col gap-3 xl:w-[320px]">
-          <button
-            onClick={handleAcceptAll}
-            className="rounded-3xl bg-gradient-to-r from-blue-500 to-indigo-500 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-500/20 transition hover:from-blue-400 hover:to-indigo-400"
+          <p className="text-xs uppercase tracking-[0.26em] text-slate-400">Cookie Preferences</p>
+          <h2 className="text-xl font-semibold text-white sm:text-2xl">Manage your cookie settings</h2>
+          <p className="text-sm leading-6 text-slate-300 sm:text-base sm:leading-7">
+    <div className="fixed inset-x-0 bottom-0 z-50 bg-slate-950/95 border-t border-slate-200/10 dark:border-white/10 py-6 shadow-2xl backdrop-blur-xl text-white transition-colors duration-300 max-h-[85vh] overflow-y-auto sidebar">
+    <div className={bannerClasses}>
+      <div className="mx-auto flex max-w-6xl flex-col sm:flex-row items-center justify-between gap-3 px-4 sm:px-6 lg:px-8 py-3">
+        <p className={`text-xs sm:text-sm leading-snug ${isDark ? "text-slate-300" : "text-slate-600"}`}>
+          🍪 We use cookies to improve your experience.{" "}
+          <Link
+            to="/cookie-policy"
+            className="underline font-medium text-blue-500 hover:text-blue-400 transition-colors"
           >
-            Accept all cookies
-          </button>
-          <button
-            onClick={handleSave}
-            className="rounded-3xl border border-slate-700 bg-slate-900 px-6 py-3 text-sm font-semibold text-white transition hover:border-slate-500"
-          >
-            Save preferences
-          </button>
+            Learn more
+          </Link>
+        </p>
+
+        <div className="flex items-center gap-2 shrink-0">
           <button
             onClick={handleRejectNonEssential}
-            className="rounded-3xl border border-slate-700 bg-slate-950 px-6 py-3 text-sm font-semibold text-slate-300 transition hover:border-slate-500"
+            className={
+              isDark
+                ? "px-3 py-1.5 rounded-lg text-xs font-semibold border border-white/10 text-slate-400 hover:text-white hover:bg-slate-800 transition-all"
+                : "px-3 py-1.5 rounded-lg text-xs font-semibold border border-slate-200 text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-all"
+            }
           >
-            Reject non-essential
+            Decline
+          </button>
+          <button
+            onClick={handleAcceptAll}
+            className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 text-white hover:bg-blue-500 transition-all"
+          >
+            Accept all
           </button>
         </div>
       </div>
@@ -148,4 +143,4 @@ const CookieConsentBanner: FC = () => {
   );
 };
 
-export default CookieConsentBanner;
+export default CookieCon
