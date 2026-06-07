@@ -2,6 +2,8 @@ import { Link } from "react-router-dom";
 import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from "react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
+import "./hero-animations.css";
+// Register the GSAP plugin
 
 // Register the GSAP plugin
 gsap.registerPlugin(useGSAP);

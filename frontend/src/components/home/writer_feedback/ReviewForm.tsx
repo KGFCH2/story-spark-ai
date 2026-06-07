@@ -97,8 +97,8 @@ const ReviewForm = () => {
   };
 
   return (
-    <div className="mx-auto max-w-2xl">
-      <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-[#0f172a]/90 to-[#111827]/90 p-6 sm:p-8 md:p-10 shadow-2xl shadow-blue-500/10 backdrop-blur-md">
+    <div className="mx-auto w-full max-w-2xl min-w-0 px-3 sm:px-0">
+      <div className="relative w-full min-w-0 overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-[#0f172a]/90 to-[#111827]/90 p-4 pb-16 shadow-2xl shadow-blue-500/10 backdrop-blur-md sm:rounded-3xl sm:p-8 md:p-10">
         {/* Background Glow */}
         <div className="pointer-events-none absolute -right-20 -top-20 h-60 w-60 rounded-full bg-blue-500/10 blur-3xl" />
         <div className="pointer-events-none absolute -bottom-20 -left-20 h-60 w-60 rounded-full bg-indigo-500/10 blur-3xl" />
@@ -143,7 +143,7 @@ const ReviewForm = () => {
             </div>
           )}
 
-          <div className="space-y-6">
+          <div className="w-full min-w-0 space-y-6">
             {/* Name */}
             <div>
               <label
@@ -162,7 +162,7 @@ const ReviewForm = () => {
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Your full name"
                 aria-invalid={!!errors.name}
-                className="w-full max-w-lg rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white placeholder-gray-500 transition-all duration-200 focus:border-blue-500/60 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                className="w-full min-w-0 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white placeholder-gray-500 transition-all duration-200 focus:border-blue-500/60 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
               />
 
               {errors.name && (
@@ -191,7 +191,7 @@ const ReviewForm = () => {
                 onChange={(e) => setRole(e.target.value)}
                 placeholder="e.g. Fantasy Writer, Student, Blogger"
                 aria-invalid={!!errors.role}
-                className="w-full max-w-lg rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white placeholder-gray-500 transition-all duration-200 focus:border-blue-500/60 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                className="w-full min-w-0 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white placeholder-gray-500 transition-all duration-200 focus:border-blue-500/60 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
               />
 
               {errors.role && (
@@ -221,10 +221,10 @@ const ReviewForm = () => {
                 onChange={(e) => setFeedback(e.target.value)}
                 placeholder="Tell us about your experience with StorySparkAI..."
                 aria-invalid={!!errors.feedback}
-                className="w-full max-w-lg resize-none rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white placeholder-gray-500 transition-all duration-200 focus:border-blue-500/60 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                className="w-full min-w-0 resize-none rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white placeholder-gray-500 transition-all duration-200 focus:border-blue-500/60 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
               />
 
-              <div className="mt-1 flex items-center justify-between max-w-lg">
+              <div className="mt-1 flex w-full min-w-0 items-center justify-between gap-3">
                 {errors.feedback ? (
                   <p className="flex items-center gap-1 text-xs text-red-400">
                     <span>⚠</span>
@@ -266,12 +266,12 @@ const ReviewForm = () => {
               )}
             </div>
 
-            <div className="flex justify-center mt-6">
+            <div className="mt-6 flex justify-center">
               <button
                 type="button"
                 onClick={handleSubmit}
                 disabled={isLoading}
-                className="w-auto rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-8 py-3 font-semibold text-white transition-all duration-200 hover:scale-[1.02] hover:from-blue-500 hover:to-indigo-500 hover:shadow-xl hover:shadow-blue-500/25 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                className="w-full rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-5 py-3 font-semibold text-white transition-all duration-200 hover:scale-[1.02] hover:from-blue-500 hover:to-indigo-500 hover:shadow-xl hover:shadow-blue-500/25 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-blue-500/50 sm:w-auto sm:px-8"
               >
               {isLoading ? (
                 <span className="flex items-center justify-center gap-2">
@@ -300,10 +300,12 @@ const ReviewForm = () => {
                 "Share Review ✨"
               )}
             </button>
-            </div>
-          </div>
         </div>
       </div>
+    </div>
+  </div>
+</div>
+  );
     </div>
   );
 };
