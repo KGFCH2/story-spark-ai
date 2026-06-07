@@ -1,29 +1,32 @@
-﻿import React, { useEffect, useState, useRef, useMemo } from "react";
+import React, { useEffect, useState, useRef, useMemo } from "react";
 import { getShortenedText, ITopicData, topicsData, getWordCount, SELECTED_TOPIC_CLASSES } from "./stories.utils";
 import toast, { Toaster } from "react-hot-toast";
 import { useCreatePostMutation, useDeletePostMutation } from "../../redux/apis/post.api";
 import { useGetProfileInfoQuery } from "../../redux/apis/user.api";
 import jsPDF from "jspdf";
 import StoryWorldMap from "../story-map/StoryWorldMap";
-import StoryRemix from "../remix/StoryRemix";
 import BookmarkButton from "../BookmarkButton";
+import CardCollection from "../cards/CardCollection";
 import logo from "../../assets/logoNew.png";
 import StoryGeneratingAnimation from "../loading/story-generating-animation.component";
 import AudioPlayer, { type AudioPlayerHandle, type NarrationPlaybackState } from "../AudioPlayer";
 import { useLocation } from "react-router-dom";
-ImageFallback
 import {
   useGenerateAlternateEndingsMutation,
   useGenerateFreeAlternateEndingsMutation,
 } from "../../redux/apis/ai.model.api";
 import ImageFallback from "../ImageFallback";
+import GeneratedStoryTimeline from "./GeneratedStoryTimeline";
 export interface IStories {
   uuid: string;
   title: string;
   content: string;
   tag: string;
+  emotions?: string[];
+  enhancedPrompt?: string;
   imageURL: string;
   language?: string;
+  genre?: string;
 }
 
 interface IPost extends IStories {
@@ -96,6 +99,7 @@ const StoriesViewComponent: React.FC<StoriesComponentProps> = ({
   const [loading, setLoading] = useState<boolean>(false);
   const [isCopied, setIsCopied] = useState<boolean>(false);
   const [showWorldMap, setShowWorldMap] = useState<boolean>(false);
+const [, setShowRemix] = useState<boolean>(false);
   const [createPost] = useCreatePostMutation();
   const [deletePost] = useDeletePostMutation();
   const { data: profile } = useGetProfileInfoQuery(undefined, { skip: !isLogin });
@@ -630,7 +634,21 @@ const StoriesViewComponent: React.FC<StoriesComponentProps> = ({
     }
   };
 
-  const handleExportMarkdown = () => {
+  const downloadBlob = (blob: Blob, filename: string) => {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+};
+
+const getSafeFileName = (title: string, ext: string) => {
+  const cleanTitle = title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+  return `${cleanTitle || "story"}.${ext}`;
+};
+
+const handleExportMarkdown = () => {
     if (!selectedStory) { toast.error("No story available to export."); return; }
     if (!selectedStory.content?.trim()) {toast.error("Story content is empty. Cannot export.");return;}
     try {
@@ -646,24 +664,6 @@ const StoriesViewComponent: React.FC<StoriesComponentProps> = ({
     } catch (error) { console.error(error); toast.error("Failed to export Markdown."); }
   };
 
-  const handleExportDOCX = () => {
-    if (!selectedStory) { toast.error("No story available to export."); return; }
-    if (!selectedStory.content?.trim()) {toast.error("Story content is empty. Cannot export.");return;}
-    try {
-      const title = selectedStory.title || "Untitled Story";
-      const docxBlob = createDocxBlob({
-        title,
-        content: selectedStory.content || "",
-        tag: selectedStory.tag || "Story",
-        author: isLogin && profile?.name ? profile.name : "Anonymous",
-      });
-      downloadBlob(docxBlob, getSafeFileName(title, "docx"));
-      toast.success("DOCX downloaded!");
-    } catch (error) {
-      console.error(error);
-      toast.error("Failed to export DOCX.");
-    }
-  };
   const handelPublishStory = async () => {
     if (!isLogin) {
       toast.error("Please login to publish the story.");
@@ -813,7 +813,7 @@ if (isLoading) {
                   onClick={handleExportMarkdown}
                   disabled={!selectedStory}
                 >
-                  ⬇️ Export Markdown
+                  ⬇️ Export as Markdown
                 </button>
                 <button
                   type="button"
@@ -1100,6 +1100,13 @@ if (isLoading) {
         </div>
 
         <div className="col-span-1 lg:col-span-4">
+          <GeneratedStoryTimeline
+            content={selectedStory.content}
+            title={selectedStory.title}
+            narrationState={narrationState}
+            narrationWordIndex={narrationWordIndex}
+          />
+
           <div className="mb-5">
             <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-300 to-blue-400">
               Preview
