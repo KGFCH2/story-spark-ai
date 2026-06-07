@@ -517,6 +517,13 @@ const deletePost = async (postId: string, token: ITokenPayload) => {
 };
 
 const remixStory = async (postId: string, prompt: string, token: ITokenPayload) => {
+  if (!prompt || typeof prompt !== "string") {
+    throw new ApiError(httpStatus.BAD_REQUEST, "Prompt is required and must be a string");
+  }
+  const safePrompt = prompt.slice(0, 500).replace(/[\n\r\t"]/g, " ").trim();
+  if (!safePrompt) {
+    throw new ApiError(httpStatus.BAD_REQUEST, "Prompt cannot be empty or whitespace");
+  }
   const user = await User.findOne({ email: token.email });
   if (!user) {
     throw new ApiError(httpStatus.BAD_REQUEST, "User not found!");
@@ -527,7 +534,7 @@ const remixStory = async (postId: string, prompt: string, token: ITokenPayload) 
     throw new ApiError(httpStatus.NOT_FOUND, "Original story post not found!");
   }
 
-  const remixedContent = `[AI Remixed Version based on prompt: "${prompt}"]\n\n${originalPost.content}`;
+  const remixedContent = `[AI Remixed Version based on prompt: "${safePrompt}"]\n\n${originalPost.content}`;
 
   const res = await Post.create({
     title: `Remix of ${originalPost.title}`,
@@ -546,6 +553,13 @@ const remixStory = async (postId: string, prompt: string, token: ITokenPayload) 
 };
 
 const translateStory = async (postId: string, language: string, token: ITokenPayload) => {
+  if (!language || typeof language !== "string") {
+    throw new ApiError(httpStatus.BAD_REQUEST, "Language is required and must be a string");
+  }
+  const safeLanguage = language.slice(0, 50).replace(/[\n\r\t"]/g, " ").trim();
+  if (!safeLanguage) {
+    throw new ApiError(httpStatus.BAD_REQUEST, "Language cannot be empty or whitespace");
+  }
   const user = await User.findOne({ email: token.email });
   if (!user) {
     throw new ApiError(httpStatus.BAD_REQUEST, "User not found!");
@@ -556,7 +570,7 @@ const translateStory = async (postId: string, language: string, token: ITokenPay
     throw new ApiError(httpStatus.NOT_FOUND, "Original story post not found!");
   }
 
-  const translatedContent = `[Translated to ${language}]\n\n${originalPost.content}`;
+  const translatedContent = `[Translated to ${safeLanguage}]\n\n${originalPost.content}`;
 
   const res = await Post.create({
     title: `${originalPost.title} (${language})`,
